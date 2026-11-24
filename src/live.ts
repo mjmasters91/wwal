@@ -1,5 +1,5 @@
 import { slugify } from './format'
-import { supabase } from './supabase'
+import { authRedirectUrl, supabase } from './supabase'
 import type { LeagueData, Role, SeasonStatus } from './types'
 
 const TABLES = [
@@ -61,7 +61,10 @@ export async function liveSignUp(input: { email: string; password: string; usern
   const result = await client().auth.signUp({
     email: input.email.trim(),
     password: input.password,
-    options: { data: { username: input.username.trim(), display_name: input.displayName.trim() || input.username.trim() } },
+    options: {
+      emailRedirectTo: authRedirectUrl,
+      data: { username: input.username.trim(), display_name: input.displayName.trim() || input.username.trim() },
+    },
   })
   if (result.error) throw new Error(result.error.message)
   if (!result.data.session) {

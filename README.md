@@ -1,6 +1,6 @@
 # Wizard & Witch Amateur League
 
-A static site for an original North American Counter-Strike 2 amateur league. The browser talks to Supabase for accounts, the ledger, and scoreboard screenshots. With no environment variables, the same UI runs on a built-in demo ledger so you can click through a season without a backend.
+A static site for an original North American Counter-Strike 2 amateur league. The browser talks to Supabase for accounts, the ledger, and scoreboard screenshots. Add `?demo=1` to any URL to use the built-in sample ledger instead.
 
 Season I is **the Ashen Oath**: seven weeks, two best-of-ones a week, then a playoff bracket. Divisions are Open, Contender, Challenger, and Apex. The steward account is **Sender**. Admin power is the `is_admin` flag on `profiles`, enforced by row level security and `SECURITY DEFINER` helpers in the unexposed `private` schema. The browser never decides who is a steward.
 
@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-Open http://127.0.0.1:41721 . If `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are missing, the site stays on the sample season. Seeded demo accounts all use the password `ashen-oath`:
+Open http://127.0.0.1:41721/wwal/?demo=1 . The path starts with `/wwal/` because that is the GitHub Pages project base. Seeded demo accounts all use the password `ashen-oath`:
 
 | Email | Who |
 | --- | --- |
@@ -21,17 +21,13 @@ Open http://127.0.0.1:41721 . If `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY
 | cinder@wwal.league | Captain of Emberquill |
 | pond@wwal.league | Captain of Pondwitch Union |
 
-`/?as=Sender` signs that demo profile in before the first paint. It does nothing once Supabase is connected. **Reset the book** on the demo bar clears the browser copy of the ledger.
+`/wwal/?demo=1&as=Sender` signs that demo profile in before the first paint. The `as` switch does nothing unless demo mode is on. **Reset the book** on the demo bar clears the browser copy of the ledger.
 
-## Connect Supabase
+## Supabase
 
-Do this on a project you create yourself. This repository does not ship a hosted project.
+The site defaults to the public project `https://ifgokhaadkhjtdtbqzjg.supabase.co` and the publishable key in `.env.example`. Those values are safe to commit. A Pages build uses the same defaults unless the repository Actions variables `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set. Never put a `service_role` key or an `sb_secret_` key in a `VITE_` variable. The app refuses to boot if it detects one.
 
-1. Copy `.env.example` to `.env.local`.
-2. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to the project URL and the publishable or anon key.
-3. Never put a `service_role` key or an `sb_secret_` key in a `VITE_` variable. The app refuses to boot if it detects one.
-
-Apply the SQL in order, then the seed. From the Supabase SQL editor that is four migration files plus `supabase/seed.sql`. With the CLI, from this directory:
+Auth email links redirect to `https://mjmasters91.github.io/wwal/`. That URL has to be allowed in the Supabase Auth redirect list. Apply the SQL yourself before expecting the live ledger to load. From the SQL editor, run the migration files in order, then `supabase/seed.sql`. With the CLI, from this directory:
 
 ```bash
 supabase start
@@ -67,6 +63,6 @@ npm run build
 npm run preview
 ```
 
-`dist/` is a static site. Host it on any static host. The Supabase URL and anon key are baked in at build time, so set the `VITE_` variables in the host's build environment, then rebuild. Demo mode is what you get when those variables are absent at build time.
+`dist/` is the GitHub Pages artifact. Assets are prefixed with `/wwal/`, and `dist/404.html` is a copy of `index.html` so a direct visit to a route such as `/standings` still loads the app. Preview it at http://127.0.0.1:41721/wwal/ .
 
-Auth redirects in `supabase/config.jsonc` point at `http://127.0.0.1:41721` for local CLI use. Set the hosted project's site URL to wherever you deploy `dist/`.
+Pushing `main` runs `.github/workflows/pages.yml`, which builds with Vite and deploys `dist/` using `actions/configure-pages`, `actions/upload-pages-artifact`, and `actions/deploy-pages`. The live site is https://mjmasters91.github.io/wwal/ . Add `?demo=1` there to browse the sample season without the database.
