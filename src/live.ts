@@ -35,10 +35,22 @@ function unwrap<T>(result: { data: T; error: { message: string } | null }) {
   return result.data
 }
 
+/** No stored session, or the server has already ended it. A visitor, not a failure. */
+function isSignedOut(error: { name?: string } | null) {
+  return error?.name === 'AuthSessionMissingError'
+}
+
 export async function loadLeague(): Promise<{ data: LeagueData; meId: string | null }> {
   const sb = client()
-  const userResult = await sb.auth.getUser()
-  if (userResult.error) throw new Error(userResult.error.message)
+  // getSession only decides whether a token is present. getUser checks it with Auth.
+  const sessionResult = await sb.auth.getSession()
+  if (sessionResult.error) throw new Error(sessionResult.error.message)
+  let meId: string | null = null
+  if (sessionResult.data.session) {
+    const userResult = await sb.auth.getUser()
+    if (userResult.error && !isSignedOut(userResult.error)) throw new Error(userResult.error.message)
+    meId = userResult.data.user?.id ?? null
+  }
   const entries = await Promise.all(
     TABLES.map(async (table) => {
       const result = await sb.from(table).select('*')
@@ -48,7 +60,7 @@ export async function loadLeague(): Promise<{ data: LeagueData; meId: string | n
   )
   return {
     data: Object.fromEntries(entries) as LeagueData,
-    meId: userResult.data.user?.id ?? null,
+    meId,
   }
 }
 
@@ -79,7 +91,8 @@ export async function liveSignOut() {
 
 async function uid() {
   const result = await client().auth.getUser()
-  if (result.error || !result.data.user) throw new Error('Sign in first.')
+  if (isSignedOut(result.error) || !result.data.user) throw new Error('Sign in first.')
+  if (result.error) throw new Error(result.error.message)
   return result.data.user.id
 }
 
